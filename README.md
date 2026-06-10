@@ -5,7 +5,7 @@ An imitation learning system for bimanual battery sorting using the ACT (Action 
 **Course:** TECHIN 517 — University of Washington, Spring 2026  
 **Team:** Alan Nur · Fan Zhang · Wei Chang
 
-**Video Demo:** [VIDEO LINK — TODO]  
+**Video Demo:** [https://www.youtube.com/shorts/71t_vV1a5WM]  
 **Pretrained Model:** [huggingface.co/alannur/bimanual-battery-picker-act](https://huggingface.co/alannur/bimanual-battery-picker-act)
 
 ---
