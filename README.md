@@ -34,11 +34,11 @@ The system uses a single end-to-end learned policy that takes RGB images from th
 
 The trained ACT policy is available on HuggingFace:
 
-**[TODO: add HuggingFace model link]**
+**[https://huggingface.co/alannur/bimanual-battery-picker-act](https://huggingface.co/alannur/bimanual-battery-picker-act)**
 
-To download manually:
+To download:
 ```bash
-huggingface-cli download <username>/bimanual-battery-picker-act --local-dir outputs/train/act-bimanual-battery-v4/checkpoints/last/pretrained_model
+hf download alannur/bimanual-battery-picker-act --local-dir outputs/train/act-bimanual-battery-v4/checkpoints/last/pretrained_model
 ```
 
 ### Training details
