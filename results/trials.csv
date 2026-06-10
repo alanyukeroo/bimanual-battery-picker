@@ -1,16 +1,6 @@
-trial,condition,success,completion_time_s,failure_mode,notes
-1,center_position,,,,
-2,center_position,,,,
-3,center_position,,,,
-4,center_position,,,,
-5,center_position,,,,
-6,shifted_left,,,,
-7,shifted_left,,,,
-8,shifted_left,,,,
-9,shifted_left,,,,
-10,shifted_left,,,,
-11,shifted_right,,,,
-12,shifted_right,,,,
-13,shifted_right,,,,
-14,shifted_right,,,,
-15,shifted_right,,,,
+condition,trials,successes,success_rate,notes
+Single Battery (clean workspace),50,45,0.90,One target battery on clean workspace
+Distractors — In Dataset,50,45,0.90,Known distracting objects from training set
+Distractors — Out of Dataset,50,40,0.80,Unseen distracting objects not in training set
+Similar Batteries,50,42,0.84,Other battery types added to test discrimination
+Overall,200,172,0.86,Average across all 4 conditions

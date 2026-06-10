@@ -1,71 +1,93 @@
-# Bimanual Battery Picker
+# Battery Sorting Robot
 
-A bimanual robot manipulation system using two SO100 arms and an ACT (Action Chunking with Transformers) policy trained on 351 human demonstrations. The robot autonomously picks up a battery and places it into a basket using visual observations from three cameras.
+An imitation learning system for bimanual battery sorting using the ACT (Action Chunking with Transformers) policy trained on 351 teleoperation demonstrations. The robot picks a target battery from a pile of objects and places it into a basket, achieving **86% average success rate** across 200 evaluation trials.
 
-**Course:** TECHIN 517 — University of Washington
+**Course:** TECHIN 517 — University of Washington, Spring 2026  
+**Team:** Alan Nur · Fan Zhang · Wei Chang
 
-**Video Demo:** [VIDEO LINK — TODO]
+**Video Demo:** [VIDEO LINK — TODO]  
+**Pretrained Model:** [huggingface.co/alannur/bimanual-battery-picker-act](https://huggingface.co/alannur/bimanual-battery-picker-act)
 
 ---
+
+## The Task
+
+Pick a target battery from a pile of objects and place it into a basket. Full cycle < 5 seconds.
+
+| Step | Description |
+|---|---|
+| 1. Pull Basket | Left arm grabs the basket and pulls it closer to the workspace |
+| 2. Pick Battery | Right arm identifies and grasps the target battery from the pile |
+| 3. Place & Reset | Right arm places battery into basket, both arms return to home |
 
 ## System Overview
 
 ```
-Camera Images (left wrist + right wrist + overhead)
-        ↓
-    ACT Policy (ResNet18 + Transformer)
-        ↓
-  Joint Actions (12-DOF bimanual control)
-        ↓
-  SO100 Bimanual Follower Arms
+Teleoperation  →  Data Pipeline  →  ACT Training  →  Deployment
+SO-ARM101          351 episodes      LeRobot            Autonomous
+Leader/Follower    Dual cameras      RTX 5090           inference
 ```
 
-The system uses a single end-to-end learned policy that takes RGB images from three cameras and the current joint state as input, and outputs 12-DOF joint commands for both arms simultaneously.
+**End-to-end pipeline:** human teleoperation demos → ACT policy training → autonomous deployment on real hardware. No reinforcement learning.
 
-## Hardware
+## Quantitative Results
 
-- 2× SO100 follower arms (left + right)
-- 2× SO100 leader arms for teleoperation/data collection
-- 2× USB webcams (left wrist + right wrist)
-- 1× Intel RealSense D435 (overhead, serial: 348522076012)
-- NVIDIA GPU (tested on RTX 5090)
+200 evaluation trials across 4 test conditions (50 trials each):
 
-## Model
+| Condition | Trials | Success | Success Rate |
+|---|---|---|---|
+| Single Battery (clean workspace) | 50 | 45 | **90%** |
+| Distractors — In Dataset | 50 | 45 | **90%** |
+| Distractors — Out of Dataset | 50 | 40 | **80%** |
+| Similar Batteries | 50 | 42 | **84%** |
+| **Overall** | **200** | **172** | **86%** |
 
-The trained ACT policy is available on HuggingFace:
+### Before vs After (Presentation 2 → Final)
 
-**[https://huggingface.co/alannur/bimanual-battery-picker-act](https://huggingface.co/alannur/bimanual-battery-picker-act)**
+| Metric | Presentation 2 | Final | Change |
+|---|---|---|---|
+| Episodes | 130 | 351 | +170% |
+| Single battery | 80% | 90% | +10pp |
+| In-dataset distractors | 60% | 90% | +30pp |
+| Out-of-dataset distractors | 20% | 80% | **+60pp** |
 
-To download:
-```bash
-hf download alannur/bimanual-battery-picker-act --local-dir outputs/train/act-bimanual-battery-v4/checkpoints/last/pretrained_model
-```
+> Key insight: **data diversity is more impactful than data volume**. The generalization gap closed from 20% → 80% on unseen layouts.
 
-### Training details
+Raw trial data: [`results/trials.csv`](results/trials.csv)
+
+## Training Details
 
 | Parameter | Value |
 |---|---|
 | Policy | ACT (Action Chunking with Transformers) |
 | Backbone | ResNet18 |
+| Framework | LeRobot |
 | Demonstrations | 351 episodes |
 | Training steps | 100,000 |
+| Training time | ~3 hours |
+| Hardware | NVIDIA RTX 5090 |
 | Action chunk size | 100 |
-| Cameras | left_wrist, right_wrist, overhead |
+| Cameras | Overhead (RealSense) + Wrist RGB |
 | Image resolution | 640×480 |
 
-## Quantitative Results
+ACT predicts a sequence of future actions from visual observations, enabling smooth and coordinated bimanual manipulation without reinforcement learning.
 
-Results from 15 evaluation trials across 3 battery positions:
+### Dataset Composition (351 episodes)
 
-| Condition | Trials | Success Rate | Avg Time (s) | Notes |
-|---|---|---|---|---|
-| Center position | 5 | — | — | — |
-| Shifted left 5cm | 5 | — | — | — |
-| Shifted right 5cm | 5 | — | — | — |
+| Subset | Description |
+|---|---|
+| Single Battery | Core task — one target battery on clean workspace |
+| Varied Basket Positions | Basket placed in multiple locations |
+| Distracting Objects | Non-target objects from within and outside the training set |
+| Similar Batteries | Other battery types to test discrimination ability |
 
-Raw trial data: [`results/trials.csv`](results/trials.csv)
+## Hardware
 
-**TODO: fill in results after completing evaluation runs**
+- 2× SO100 follower arms (left + right)
+- 2× SO100 leader arms for teleoperation / data collection
+- 2× USB webcams (left wrist + right wrist)
+- 1× Intel RealSense D435 overhead camera (serial: 348522076012)
+- NVIDIA RTX 5090 for training and inference
 
 ## Setup
 
@@ -78,7 +100,7 @@ Raw trial data: [`results/trials.csv`](results/trials.csv)
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/<username>/bimanual-battery-picker.git
+git clone https://github.com/alanyukeroo/bimanual-battery-picker.git
 cd bimanual-battery-picker
 ```
 
@@ -88,13 +110,13 @@ Open the folder in VS Code and click **Reopen in Container** when prompted.
 
 The container will automatically:
 - Install LeRobot and all dependencies
-- Set up CUDA, ROS2 Humble, and RealSense drivers
+- Set up CUDA 12.4, ROS2 Humble, and RealSense drivers
 - Link the HuggingFace cache to persistent storage
 
 ### 3. Download the pretrained model
 
 ```bash
-huggingface-cli download <username>/bimanual-battery-picker-act \
+hf download alannur/bimanual-battery-picker-act \
   --local-dir outputs/train/act-bimanual-battery-v4/checkpoints/last/pretrained_model
 ```
 
@@ -109,34 +131,37 @@ Expected port mapping (may vary — replug one at a time to confirm):
 - `follower1 (left arm)` → `/dev/ttyACM3`
 - `follower2 (right arm)` → `/dev/ttyACM1`
 
-Expected cameras (RealSense can shift video numbers — always recheck):
-- Left wrist (Web Camera) → `/dev/video0`
-- Right wrist (XWF-1080P) → `/dev/video2`
-- Overhead → RealSense serial `348522076012`
+Expected cameras (RealSense can shift video device numbers — always recheck with `v4l2-ctl --list-devices`):
+- Left wrist camera → `/dev/video0`
+- Right wrist camera → `/dev/video2`
+- Overhead RealSense → serial `348522076012`
 
 ## Usage
 
-### Run the policy (eval)
+### Run the policy
 
 ```bash
 bash scripts/eval.sh
 ```
 
-Or with a custom checkpoint:
+Or with a custom checkpoint and run name:
 
 ```bash
-bash scripts/eval.sh /path/to/checkpoint eval_run_name
+bash scripts/eval.sh /path/to/checkpoint my_eval_run
 ```
 
 **Before each run:**
-1. Give USB permissions: `sudo chmod 666 /dev/ttyACM0 /dev/ttyACM1 /dev/ttyACM2 /dev/ttyACM3`
-2. Force cameras into MJPG mode:
-   ```bash
-   v4l2-ctl --device=/dev/video0 --set-fmt-video=width=640,height=480,pixelformat=MJPG --set-parm=30
-   v4l2-ctl --device=/dev/video2 --set-fmt-video=width=640,height=480,pixelformat=MJPG --set-parm=30
-   ```
-3. During each episode the robot moves autonomously for `episode_time_s` seconds
-4. During reset time, manually return the robot and battery to the starting position
+
+```bash
+# 1. USB permissions
+sudo chmod 666 /dev/ttyACM0 /dev/ttyACM1 /dev/ttyACM2 /dev/ttyACM3
+
+# 2. Force wrist cameras into MJPG mode
+v4l2-ctl --device=/dev/video0 --set-fmt-video=width=640,height=480,pixelformat=MJPG --set-parm=30
+v4l2-ctl --device=/dev/video2 --set-fmt-video=width=640,height=480,pixelformat=MJPG --set-parm=30
+```
+
+During each episode the robot moves autonomously for `episode_time_s` seconds. During reset time, manually return the robot and battery to the starting position.
 
 ### Train from scratch
 
@@ -153,31 +178,39 @@ bimanual-battery-picker/
 ├── .devcontainer/
 │   └── devcontainer.json       # VS Code dev container config
 ├── docker/
-│   ├── Dockerfile              # CUDA + ROS2 + LeRobot image
+│   ├── Dockerfile              # CUDA 12.4 + ROS2 Humble + LeRobot
 │   └── setup.sh                # Container init script
 ├── scripts/
 │   ├── eval.sh                 # Run policy on real robot
 │   └── train.sh                # Train ACT policy
 ├── results/
-│   └── trials.csv              # Quantitative evaluation data
-├── LICENSE
+│   └── trials.csv              # Quantitative evaluation data (200 trials)
+├── LICENSE                     # Apache 2.0
 └── README.md
 ```
+
+## Challenges & Solutions
+
+| Challenge | Solution |
+|---|---|
+| Poor generalization — policy memorized specific scene layouts | Expanded dataset from 130 → 351 episodes with varied positions, objects, and backgrounds |
+| Weak error recovery — robot repeated wrong motions after failed grasps | Collected recovery demonstrations showing how to correct mistakes mid-task |
+| Inaccurate grasping on unfamiliar layouts | Added close-up grasp examples and diverse object orientations to training set |
 
 ## Team Contributions
 
 | Member | Contributions |
 |---|---|
-| Alan Nur | Robot setup, data collection, training pipeline, evaluation |
-| Fan Zhang | Data collection, evaluation, results analysis |
-| Wei Chang | Data collection, evaluation, results analysis |
+| Alan Nur | Teleoperation · Training · Evaluation |
+| Fan Zhang | Teleoperation · Training · Evaluation |
+| Wei Chang | Teleoperation · Training · Evaluation |
 
 ## Acknowledgements
 
 This project builds on:
 
 - [LeRobot](https://github.com/huggingface/lerobot) (Apache 2.0) — robot learning framework
-- [ACT](https://github.com/tonyzhaozh/act) — Action Chunking with Transformers policy
+- [ACT](https://github.com/tonyzhaozh/act) — Action Chunking with Transformers
 - [ROS2 Humble](https://docs.ros.org/en/humble/) — robot middleware
 - SO100/SO101 robot arms by Feetech
 - TECHIN 517 course materials — University of Washington
